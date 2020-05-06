@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>My first three.js app</title>
+    <style>
+        body {
+            margin: 0;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+<script src="three.min.js"></script>
+<script src="OrbitControls.js"></script>
+
+<video id="video" loop muted crossOrigin="anonymous"
+       playsinline style="display:none">
+    <source src="textures/pano.mp4">
+</video>
+
+<script>
+
+    // Our Javascript will go here.
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const raycaster = new THREE.Raycaster();
+    const loader = new THREE.TextureLoader();
+    let mouse = new THREE.Vector2(), INTERSECTED;
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+
+    ///// SCENE 1
+
+    let scene = new THREE.Scene();
+
+    scene.background = new THREE.CubeTextureLoader()
+        .setPath('images/')
+        .load(['posx.jpg', 'negx.jpg', 'posy.jpg', 'negy.jpg', 'posz.jpg', 'negz.jpg']);
+
+    const geometry = new THREE.BoxGeometry();
+    const material = new THREE.MeshPhongMaterial({
+        color: 0x00ff00,
+        envMap: scene.background,
+    });
+    material.shininess = 160;
+    object = new THREE.Mesh(new THREE.TorusKnotBufferGeometry(1, 0.3, 100, 8), material);
+    scene.add(object);
+    object.position.z = -15;
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
+    directionalLight.position.set(1, 1, 10);
+    scene.add(directionalLight);
+
+    const light = new THREE.AmbientLight(0x404040); // soft white light
+    scene.add(light);
+
+
+    /////
+
+    ///// SCENE2
+
+    const scene2 = new THREE.Scene();
+
+    const video = document.getElementById('video');
+    video.play();
+    const texture = new THREE.VideoTexture(video);
+    const material2 = new THREE.MeshBasicMaterial({map: texture, side: THREE.BackSide});
+    const videodome = new THREE.Mesh(geometry, material);
+    videodome.tag = 'videodome';
+    scene2.add(videodome);
+
+    scene2.background = new THREE.CubeTextureLoader()
+        .setPath('images/')
+        .load(['posx.jpg', 'negx.jpg', 'posy.jpg', 'negy.jpg', 'posz.jpg', 'negz.jpg']);
+
+    const geometry2 = new THREE.SphereGeometry(5, 32, 32);
+    const sphere = new THREE.Mesh(geometry2, material2);
+    scene2.add(sphere);
+
+    const light2 = new THREE.AmbientLight(0x404040);
+    scene2.add(light2);
+
+    /////
+
+
+    // Animate and Controls
+    const animate = function () {
+
+        requestAnimationFrame(animate);
+
+        object.rotation.x += 0.01;
+        object.rotation.y += 0.01;
+
+        // required if controls.enableDamping or controls.autoRotate are set to true
+        controls.update();
+
+        raycaster.setFromCamera(mouse, camera);
+
+        // calculate objects intersecting the picking ray
+        let intersects = raycaster.intersectObjects(scene.children);
+
+
+        if (intersects.length > 0) {
+            if (INTERSECTED !== intersects[0].object) {
+                if (INTERSECTED) INTERSECTED.material.emissive.setHex(INTERSECTED.currentHex);
+                INTERSECTED = intersects[0].object;
+                INTERSECTED.currentHex = INTERSECTED.material.emissive.getHex();
+                INTERSECTED.material.emissive.setHex(0xffffff);
+                scene = scene2;
+            }
+
+        } else {
+            if (INTERSECTED) INTERSECTED.material.emissive.setHex(INTERSECTED.currentHex);
+            INTERSECTED = null;
+        }
+
+
+        renderer.render(scene, camera);
+    };
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.update();
+
+    camera.position.set(0, 0, 0.01);
+    camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+
+    function onMouseMove(event) {
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    }
+
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    window.addEventListener('resize', onWindowResize, false);
+    window.addEventListener('mousemove', onMouseMove, false);
+
+    animate();
+
+</script>
+</body>
+</html>
